@@ -75,5 +75,5 @@ Evidências: `evidencias/print-timing-invocacoes.png`, `evidencias/print-primeir
 ## Uso de IA
 
 - **Ferramenta:** Claude (Anthropic)
-- **Finalidade:** orientação na instalação do SAM CLI e do Docker no Linux Mint, e diagnóstico dos erros de permissão do Docker e do body em base64.
-- **Validação:** _a preencher_
+- **Finalidade:** orientação, usando pdf da atividade como contexto, na instalação do SAM CLI e do Docker no Linux Mint, e diagnóstico dos erros de permissão do Docker e do body em base64. Assim como escrita da documentacao
+- **Validação:** Validacao manual de todos os outputs de documentacao, todos os passos de codigo, comandos de terminal, e verificoes foram feitas manualmente. 
