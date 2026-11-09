@@ -35,8 +35,8 @@ sam local invoke -e events/pedido.json
 - [x] Passo 2: projeto criado com `sam init` (Hello World, python3.12, zip) e `app.py` trocado pelo do enunciado
 - [X] Passo 2: trocar no `template.yaml` o `Path: /hello` por `/guias` e o `Method: get` por `post`
 - [x] Passo 3: invocação com evento (duas execuções registradas)
-- [ ] Passo 4: chamada por HTTP (`sam local start-api` + `curl`), com e sem `--warm-containers LAZY`
-- [ ] Passo 5: estouro do timeout (`demorar: true`) e ajuste para 10 s
+- [x] Passo 4: chamada por HTTP (`sam local start-api` + `curl`), com e sem `--warm-containers LAZY`
+- [x] Passo 5: estouro do timeout (`demorar: true`) e ajuste para 10 s
 - [ ] Respostas às 5 perguntas
 - [ ] Vídeo de até 3 min
 
