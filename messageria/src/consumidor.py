@@ -10,14 +10,14 @@ def processar(pedido):
     
     print(os.getpid(), "guia G-" + pedido["requisicaoId"], pedido.get("hospital"))
 
-    while True:
-        resp = sqs.receive_message(
-            QueueUrl=url, MaxNumberOfMessages=10, WaitTimeSeconds=10,
-            MessageSystemAttributeNames=["ApproximateReceiveCount"])
-        
-        for m in resp.get("Messages", []):
-            try:
-                processar(json.loads(m["Body"]))
-                sqs.delete_message(QueueUrl=url, ReceiptHandle=m["ReceiptHandle"])
-            except Exception as e:
-                print("falhou; volta para a fila:", e, m.get("Attributes"))
+while True:
+    resp = sqs.receive_message(
+        QueueUrl=url, MaxNumberOfMessages=10, WaitTimeSeconds=10,
+        MessageSystemAttributeNames=["ApproximateReceiveCount"])
+    
+    for m in resp.get("Messages", []):
+        try:
+            processar(json.loads(m["Body"]))
+            sqs.delete_message(QueueUrl=url, ReceiptHandle=m["ReceiptHandle"])
+        except Exception as e:
+            print("falhou; volta para a fila:", e, m.get("Attributes"))
