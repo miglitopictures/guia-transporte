@@ -9,7 +9,7 @@ Fila compativel com o Amazon SQS, com um produtor que publica pedidos de guia de
 
 **Caminho escolhido:** A (ElasticMQ local em Docker, sem conta AWS).
 
-**Vídeo:** _(pendente)_
+**Vídeo:** https://youtu.be/Gg44Q7OpnN0
 
 ## Pré-requisitos
 
@@ -57,7 +57,7 @@ aws sqs purge-queue --queue-url http://localhost:9324/000000000000/guias \
 - [x] Passo 5.2: dois consumidores dividindo as mensagens
 - [x] Experimento extra: três consumidores
 - [x] Respostas às 5 perguntas
-- [ ] Vídeo de até 3 min
+- [x] Vídeo de até 3 min
 
 ## Registros
 ### 1. Instalar as ferramentas
