@@ -1,7 +1,7 @@
-# guia-transporte
+# Guia de Transporte Serverless - Atividade individual 1
+Infraestrutura de Software · ADS · CESAR School · 2026.2
 
-Atividade individual 1 (Serverless) · Infraestrutura de Software · ADS · CESAR School · 2026.2
-Miguel Duarte de Barros (mdb@cesar.shool)
+Miguel Duarte de Barros (mdb@cesar.school)
 
 Função serverless que gera a **guia de transporte** de uma requisição do Rota Vital, rodando localmente com o AWS SAM CLI.
 
@@ -38,7 +38,7 @@ sam local invoke -e events/pedido.json
 - [x] Passo 3: invocação com evento (duas execuções registradas)
 - [x] Passo 4: chamada por HTTP (`sam local start-api` + `curl`), com e sem `--warm-containers LAZY`
 - [x] Passo 5: estouro do timeout (`demorar: true`) e ajuste para 10 s
-- [ ] Respostas às 5 perguntas
+- [x] Respostas às 5 perguntas
 - [ ] Vídeo de até 3 min
 
 ## Registros
@@ -63,14 +63,14 @@ Evidências: `evidencias/print-timing-invocacoes.png`, `evidencias/print-primeir
 ## Perguntas
 
 1. Por que a primeira invocação demorou mais que a segunda? O que acontece na fase de Init?
-   > Na primeira chamada da nossa função acontece um "cold start": a plataforma precisa inicializar o ambiente de execução (no aws sam, subir o container no docker), carregar o codigo na memoria, iniciar o interpretador de python e rodar tudo que fica fora do handler (os `import` e o `contador = 0`). Isso é a fase de init. As invocacoes seguintes reaproveitam o mesmo ambiente e nao precisam passar de novo pelo init, só executam o handler (no `sam start api`, mesmo sem o flag). Nos meus testes a primeira chamada levou ~100 ms e as seguintes ~2 ms.
+   > Na primeira chamada da nossa função acontece um "cold start": a plataforma precisa inicializar o ambiente de execução (no aws sam, subir o container no docker), carregar o codigo na memoria, iniciar o interpretador de python e rodar tudo que fica fora do handler (os `import` e o `contador = 0`). Isso é a fase de init. As invocacoes seguintes reaproveitam o mesmo ambiente e nao precisam passar de novo pelo init, só executam o handler (no `sam local start-api`, mesmo sem o flag). Nos meus testes a primeira chamada levou ~100 ms e as seguintes ~2 ms.
    > fonte: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html
 
 2. O que o campo `invocacaoNesteAmbiente` mostrou com e sem `--warm-containers`?
    > nos dois casos o contador foi 1, 2, 3. na versao do sam que usei, o `start-api` sem flag ja cria o container quando o servidor sobe e reaproveita ele entre as chamadas; com `--warm-containers LAZY` o container so nasce na primeira chamada, mas depois tambem é reaproveitado. quando reiniciei o servidor o contador voltou pra 1, porque o container foi descartado. o caso "sem reaproveitamento" apareceu no `sam local invoke` do passo 3: cada execucao criou um container novo e o contador ficou sempre em 1.
    > o contador sobe porque o `contador = 0` fica fora do handler e só roda no init, enquanto o `contador += 1` roda a cada chamada. ou seja, a variavel global sobrevive enquanto o ambiente estiver vivo, mas isso é sorte, nao garantia: quem decide se o ambiente é reaproveitado é a plataforma. o ambiente pode morrer (inatividade, deploy, timeout) e, com muitas requisicoes ao mesmo tempo, o lambda cria varias copias da funcao, cada uma com seu proprio contador. entao estado que importa (tipo numero de guias emitidas) tem que ficar fora da funcao, num banco ou cache. variavel global serve pra coisas caras de criar que podem ser recriadas sem problema, tipo uma conexao com o banco.
 3. O que aconteceu com `demorar = true`? Qual o tempo máximo no Lambda?
-   > Com `demorar = true`a nossa função realiza um sleep de 5s:
+   > Com `demorar = true` a nossa função realiza um sleep de 5s:
    ```python
       if pedido.get("demorar"):
          time.sleep(5) # passa do Timeout de 3 s do template
@@ -81,10 +81,14 @@ Evidências: `evidencias/print-timing-invocacoes.png`, `evidencias/print-primeir
          Function:
             Timeout: 3
    ```
-   > Isso faz nossa lambda parar antes de finalizar o processamento de nossa funcao handler e retornar o resposta desejada.
-Resultando num `Internal server error`.
+   > Isso faz nossa lambda parar antes de finalizar o processamento de nossa funcao handler e retornar a resposta desejada. Resultando num `Internal server error`.
+
+   > quando aumentamos o timeout pra 10s e rodamos `sam build` de novo, a mesma chamada terminou em ~5,1 s com 201. se o trabalho passar de 15 min (maximo segundo [documentacao](https://docs.aws.amazon.com/lambda/latest/dg/configuration-timeout.html)), nao da pra resolver só aumentando o timeout.
+   
+   > Poderiamos quebrar em partes menores (uma funcao chamando a proxima ao terminar) e orquestrar as etapas (com algo como [Amazon Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)). Cada funcao continua curta e stateless, mas o sistema fica mais complexo. Se o trabalho for naturalmente longo e continuo, pode ser mais prudente optar por outro modelo de execucao, tipo um container sempre ligado.
+
 4. Custo de 1 milhão de execuções (128 MB, 100 ms) em us-east-1:
-   > valor base: (US 0,20 por milhão de requisições e US 0,0000166667 por GB-s)
+   > valor base: (US$ 0,20 por milhão de requisições e US$ 0,0000166667 por GB-s)
    
    > memoria: 128 MB = 128 / 1024 = 0,125 GB
    > tempo: 100 ms = 0,1 s
@@ -108,5 +112,5 @@ Resultando num `Internal server error`.
 ## Uso de IA
 
 - **Ferramenta:** Claude (Anthropic)
-- **Finalidade:** orientação, usando pdf da atividade como contexto, na instalação do SAM CLI e do Docker no Linux Mint, e diagnóstico dos erros de permissão do Docker e do body em base64. Assim como escrita da documentacao
+- **Finalidade:** orientação, usando pdf da atividade como contexto, na instalação do SAM CLI e do Docker no Linux Mint, e diagnóstico dos erros de permissão do Docker e do body em base64. Assim como ajuda na revisao e escrita da documentacao.
 - **Validação:** Validacao manual de todos os outputs de documentacao, todos os passos de codigo, comandos de terminal, e verificoes foram feitas manualmente. 
