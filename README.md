@@ -12,7 +12,7 @@ Função serverless que gera a **guia de transporte** de uma requisição do Rot
 ## Pré-requisitos
 
 - Linux Mint (ThinkPad T14 Gen 2, x86_64)
-- AWS SAM CLI (versão em `evidencias/print-sam-version.png`)
+- AWS SAM CLI (versão em [print-sam-version.png](evidencias/print-sam-version.png))
 - Docker Engine, com o usuário no grupo `docker`
 - Python 3.12 (runtime da função)
 
@@ -55,7 +55,11 @@ sam local invoke -e events/pedido.json
 
 Na primeira execução, o SAM baixou e montou a imagem `public.ecr.aws/lambda/python:3.12` antes de invocar.
 
-Evidências: `evidencias/print-timing-invocacoes.png`, `evidencias/print-primeira-invocacao-erro-base64-encoding.png`.
+**Evidências:**
+
+[Primeira invocação com erro de base64](evidencias/print-primeira-invocacao-erro-base64-encoding.png)
+
+[Tempos das invocações](evidencias/print-timing-invocacoes.png)
 
 ### Passo 4: chamada por HTTP
 
@@ -76,7 +80,11 @@ curl -X POST http://127.0.0.1:3000/guias -H "Content-Type: application/json" \
 - Nas chamadas reaproveitadas, o log mostra `Lambda function 'HelloWorldFunction' is already running`.
 - Ao reiniciar o servidor, o container é descartado e o contador volta para 1.
 
-Evidências: `evidencias/print-rodando-api-sam-start-api.png`, `evidencias/print-sem-warmup.png`.
+**Evidências:**
+
+[sam local start-api rodando](evidencias/print-rodando-api-sam-start-api.png)
+
+[Chamadas HTTP e contador](evidencias/print-sem-warmup.png)
 
 ### Passo 5: limite de tempo
 
@@ -92,7 +100,13 @@ curl -X POST http://127.0.0.1:3000/guias -H "Content-Type: application/json" \
 
 Observação: `"demorar":"true"` (string) tem o mesmo efeito de `true`, porque qualquer string não vazia é verdadeira no `if` do Python.
 
-Evidências: `evidencias/print-timeout-3s-erro.png`, `evidencias/print-timeout-sucesso-10.png`, `evidencias/prunt-curl-antes-e-depois-timeout.png`.
+**Evidências:**
+
+[Timeout de 3 s: erro](evidencias/print-timeout-3s-erro.png)
+
+[Timeout de 10 s: sucesso](evidencias/print-timeout-sucesso-10.png)
+
+[curl antes e depois do ajuste do timeout](evidencias/prunt-curl-antes-e-depois-timeout.png)
 
 ## Problemas encontrados
 
