@@ -5,25 +5,37 @@ Atividade individual 2 | Infraestrutura de Software | ADS - CESAR School - 2026.
 
 **1. Por que o consumidor só apaga a mensagem depois de processar? O que aconteceria se apagasse antes?**
 
-Se o consumidor apagasse a pensagem (tirasse da fila) logo ao iniciar o processamento dela, teriamos o risco do consumidor cair e a **mensagem se perder silenciosamente**. Por isso o mecanismo do Visibility Timeout "esconde" a mensagem por um tempo estabelecido esperando a confirmação do consumidor de que a mensagem foi processada e pode ser deletada da fila (sqs.delete_message() no nosso caso).
+Se o consumidor apagasse a mensagem logo ao receber e caisse antes de terminar (erro, queda de energia, ctrl+c), **a mensagem se perderia silenciosamente**: a guia nunca seria emitida e ninguem ia saber. o delete_message() é a confirmacao de que deu certo, entao ele so pode vir depois do processamento. Se a confirmacao nao vem, a mensagem continua na fila e reaparece depois do visibility timeout.
 
 **2. Com dois consumidores, como as mensagens se dividiram? A ordem foi mantida? O que a documentação do SQS diz sobre ordem nas filas padrão?**
 
-nesse teste as mensagens se dividiram uma pra cada (ver tabela no [5.2](#52-dois-consumidores)).
+nesse teste as mensagens se dividiram igualmente: 10 pra cada, impares num e pares no outro (ver tabela no [5.2](#52-dois-consumidores)). com tres consumidores ficou 7/7/6. a fila entregou em ordem (R-001, R-002, R-003...) e cada consumidor processou as suas em ordem, mas como eles rodam em paralelo a **ordem geral de processamento nao é garantida**, ficou intercalada.
 
-> Na documentacao do SQS, é especificado que as mensagens podem chegar repetidas ou fora de ordem devido a arquitetura altamente distribuida. Mas tambem especificam que a fila padrao tenta sempre manter a ordem quando possivel. (talvez por isso nos meus runs, sairam certinhas)
+na documentacao do SQS, a fila padrao tenta manter a ordem quando possivel (best-effort ordering), mas as mensagens podem chegar fora de ordem ou repetidas por causa da arquitetura altamente distribuida.
 
 https://docs.aws.amazon.com/pt_br/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html
 
 **3. A fila padrão garante entrega pelo menos uma vez, e a mesma mensagem pode chegar duas vezes. O que isso exige do consumidor? Como vocês o tornariam idempotente?**
 
-Todo consmidor poderia checar se uma guia ja foi processada consultando um banco que salva o id das guias que ja foram consumidas. Caso seja algo muito critico, poderiamos usar uma tecnica de deduplicacao com ID, como especificado na [documentação do SQS](https://docs.aws.amazon.com/pt_br/AWSSimpleQueueService/latest/SQSDeveloperGuide/using-messagededuplicationid-property.html).
+Como a mesma mensagem pode chegar mais de uma vez, o consumidor tem que ser idempotente: processar a mesma mensagem duas vezes tem que ter o mesmo efeito que processar uma. no rota vital, sem isso, poderiam sair duas guias pra mesma requisicao (transporte duplicado de hemocomponente).
+
+Todo consmidor poderia checar se uma guia ja foi processada consultando um banco que salva o id das guias que ja foram consumidas. Caso seja algo muito critico, poderiamos usar uma tecnica de deduplicacao com ID, como especificado na [documentação do SQS](https://docs.aws.amazon.com/pt_br/AWSSimpleQueueService/latest/SQSDeveloperGuide/using-messagededuplicationid-property.html) em uma fila FIFO.
 
 **4. Expliquem o visibility timeout com o que viram na mensagem inválida. Para que serve uma DLQ?**
 
-O visibility deixa uma mensagem invisivel por um tempo predeterminado para evitar processamento redundante. Se o tempo passar e nenhum consumidor enviar o delete_message() a mensagem "volta" pra fila para ser processada.
+Quando um consumidor recebe a mensagem, ela nao sai da fila: fica invisivel pros outros pelo visibility timeout (15 s na nossa fila, da pra ver o MillisVisibilityTimeout(15000) no log do ElasticMQ). isso evita que dois consumidores processem a mesma mensagem ao mesmo tempo. se o tempo passar sem delete_message(), ela fica visivel de novo, e assim a mensagem nao se perde se o consumidor morrer. com a mensagem invalida deu pra ver isso: ela reaparecia a cada ~15 s, o ApproximateReceiveCount subia e ela pulava de um consumidor pro outro.
+
+O problema é que uma mensagem que nunca vai dar certo fica girando pra sempre. no meu experimento, sem limpar a fila, ficaram varias invalidas girando ao mesmo tempo, com contador chegando a 48, gastando os consumidores a toa. a DLQ (dead-letter queue) resolve isso: configura um limite de tentativas (maxReceiveCount, por exemplo 3) e, passou disso, a mensagem vai pra outra fila em vez de voltar, ficando separada pra alguem investigar.
 
 **5. No Rota Vital, qual a diferença entre o hospital chamar a emissão de guia diretamente (síncrono) e passar por uma fila (assíncrono)? O que se ganha e o que se perde?**
+
+Na atividade 1 o hospital chamava a emissao direto (POST /guias) e recebia a guia na resposta. isso é sincrono: a resposta é imediata e simples, mas exige que tudo funcione naquele momento. Se o servico de guias estiver fora do ar ou lento, o pedido do hospital falha ou fica travado esperando, e num pico de requisicoes (um acidente com muita demanda de sangue, por exemplo) o servico pode nao dar conta.
+
+Com a fila o hospital so publica o pedido e segue.
+
+O que se ganha: o pedido nao se perde mesmo se o servico de guias cair, ele fica guardado na fila até alguem processar; picos ficam acumulados na fila em vez de derrubar o servico; e da pra colocar mais consumidores pra dividir o trabalho, como vi nos testes com 2 e 3 consumidores.
+
+O que se perde: o imediatismo, o hospital nao recebe a guia na hora e precisa de outro jeito de saber se ela saiu ou falhou (talvez receber uma notificacao); entram os problemas de ordem e de mensagem duplicada (perguntas 2 e 3); e é mais uma peca de infraestrutura pra manter e depurar.
 
 ## Passos e evidencias
 ### 1. Instalar as ferramentas
