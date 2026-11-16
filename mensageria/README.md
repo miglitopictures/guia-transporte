@@ -28,7 +28,6 @@ docker run --rm -p 9324:9324 softwaremill/elasticmq-native
 
 # terminal 2: credenciais falsas (o ElasticMQ aceita qualquer valor) e criação da fila
 export AWS_ACCESS_KEY_ID=x AWS_SECRET_ACCESS_KEY=x AWS_DEFAULT_REGION=us-east-1
-export AWS_PAGER=""   # ver "Problemas encontrados"
 aws sqs create-queue --queue-name guias --attributes VisibilityTimeout=15 \
     --endpoint-url http://localhost:9324
 
@@ -59,7 +58,6 @@ aws sqs purge-queue --queue-url http://localhost:9324/000000000000/guias \
 - [x] Experimento extra: três consumidores
 - [x] Respostas às 5 perguntas
 - [ ] Vídeo de até 3 min
-- [ ] Opcional: DLQ
 
 ## Registros
 ### 1. Instalar as ferramentas
