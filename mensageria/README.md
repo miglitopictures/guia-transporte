@@ -16,3 +16,13 @@ Configurando as variaveis de ambiente e criando a sqs queue com o aws cli.
 ### 3-4. consumidor.py e produtor.py
 Criados oe colocados na pasta src (pra ficar organizadinho).
 ![scripts de teste copiados](./evidencias/print-dir-src.png)
+### 5.1 Um consumidor
+Com um consumidor todas as guias produzidas sao consumidas por ele.
+![um consumidor](./evidencias/print-consumidor-1.png)
+![o produtor envia as mensagens](./evidencias/print-produtor-1.png)
+### 5.2 Dois consumidores
+Com dois consumidores, as mensagens sao distribuidas alternadamente entre eles.
+![dois consumidores e um produtor](./evidencias/print-dois-consumidores-5.2.png)
+#### um experimento
+Com tres consumidores, o comportamento se mantem.
+![dois consumidores e um produtor](./evidencias/print-experimento-tres-consumidores.png)
