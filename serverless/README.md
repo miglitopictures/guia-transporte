@@ -1,5 +1,7 @@
-# Guia de Transporte Severless
+# Guia de Transporte Serverless
 Atividade individual 1 | Infraestrutura de Software | ADS - CESAR School - 2026.2
+
+[← voltar ao índice do repositório](../README.md)
 
 **Miguel Duarte de Barros | mdb@cesar.school**
 
@@ -19,6 +21,8 @@ Função serverless que gera a **guia de transporte** de uma requisição do Rot
 - Python 3.12 (runtime da função)
 
 ## Como rodar
+
+Todos os comandos a partir da pasta `serverless/`.
 
 ```bash
 # 1. build
