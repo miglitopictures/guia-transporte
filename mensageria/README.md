@@ -1,8 +1,31 @@
 # Mensageria
 Atividade individual 2 | Infraestrutura de Software | ADS - CESAR School - 2026.2
 
+Perguntas
 
-## Passos
+**Por que o consumidor só apaga a mensagem depois de processar? O que  aconteceria se apagasse antes?**
+
+**Com dois consumidores, como as mensagens se dividiram? A ordem foi mantida? O que a documentação do SQS diz sobre ordem nas filas padrão?**
+nesse teste as mensagens se dividiram uma pra cada:
+
+| PID | requisicoes processadas | total |
+|---|---|---|
+| 55833 | R-001, 003, 005, 007, 009, 011, 013, 015, 017, 019 | 10 |
+| 56283 | R-002, 004, 006, 008, 010, 012, 014, 016, 018, 020 | 10 |
+
+>Cada consumidor viu as suas em ordem, mas a ordem geral nao foi mantida (ficou intercalada entre os dois). A divisao certinha foi o que aconteceu aqui, nao uma garantia da fila.
+
+> Na documentacao da SQS, é especificado que as mensagens podem chegar repetidas ou fora de ordem devido a arquitetura altamente distuibuida. Mas tambem especificam que a fila padrao tenta o sempre manter a ordem quando possivel. (talvez por isso nos meus runs, sairam certinhas)
+
+https://docs.aws.amazon.com/pt_br/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html
+
+**A fila padrão garante entrega pelo menos uma vez, e a mesma mensagem pode chegar duas vezes. O que isso exige do consumidor? Como vocês o tornariam idempotente?**
+
+Sera que deveramos usar uma tectina de desduplicacao com ID, como especificado na [documentação]:(https://docs.aws.amazon.com/pt_br/AWSSimpleQueueService/latest/SQSDeveloperGuide/using-messagededuplicationid-property.html)
+
+**Expliquem o visibility timeout com o que viram na mensagem inválida. Para que serve uma DLQ? 5. No Rota Vital, qual a diferença entre o hospital chamar a emissão de guia diretamente (síncrono) e passar por uma fila (assíncrono)? O que se ganha e o que se perde?**
+
+## Passos e evidencias
 ### 1. Instalar as ferramentas
 Instalei AWS CLI v2 e a biblioteca boto3 para python (usando venv). O restante já estava instalado.
 ![instalacao ok](./evidencias/print-versoes.png)
@@ -21,14 +44,6 @@ Com um consumidor todas as guias produzidas sao consumidas por ele, na ordem (R-
 ![um consumidor](./evidencias/print-consumidor-1.png)
 ![o produtor envia as mensagens](./evidencias/print-produtor-1.png)
 ### 5.2 Dois consumidores
-Com dois consumidores, nesse teste as mensagens se dividiram uma pra cada:
-
-| PID | requisicoes processadas | total |
-|---|---|---|
-| 55833 | R-001, 003, 005, 007, 009, 011, 013, 015, 017, 019 | 10 |
-| 56283 | R-002, 004, 006, 008, 010, 012, 014, 016, 018, 020 | 10 |
-
-Cada consumidor viu as suas em ordem, mas a ordem geral nao foi mantida (ficou intercalada entre os dois). A divisao certinha foi o que aconteceu aqui, nao uma garantia da fila.
 
 Nao limpei a fila entre o 5.1 e o 5.2, entao a invalida do 5.1 continuou rodando (contador 6 a 11, passando pelos dois consumidores) e o produtor colocou uma invalida nova (contador comecando em 1).
 ![dois consumidores e um produtor](./evidencias/print-dois-consumidores-5.2.png)
