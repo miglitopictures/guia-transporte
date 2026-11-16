@@ -11,6 +11,8 @@ ElasticMQ rodando no docker.
 ![docker rodando imagem](./evidencias/print-elasticmq-docker-rodando.png)
 Configurando as variaveis de ambiente e criando a sqs queue com o aws cli.
 ![queue criada](./evidencias/print-create-queue.png)
+![queue url rodando](./evidencias/print-queue-url.png)
+![log no elasticmq](./evidencias/print-log-create-queue.png)
 ### 3-4. consumidor.py e produtor.py
 Criados oe colocados na pasta src (pra ficar organizadinho).
 ![scripts de teste copiados](./evidencias/print-dir-src.png)
