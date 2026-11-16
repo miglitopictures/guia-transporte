@@ -1,6 +1,7 @@
 # guia-transporte
 
 Atividade individual 1 (Serverless) · Infraestrutura de Software · ADS · CESAR School · 2026.2
+Miguel Duarte de Barros (mdb@cesar.shool)
 
 Função serverless que gera a **guia de transporte** de uma requisição do Rota Vital, rodando localmente com o AWS SAM CLI.
 
@@ -62,15 +63,47 @@ Evidências: `evidencias/print-timing-invocacoes.png`, `evidencias/print-primeir
 ## Perguntas
 
 1. Por que a primeira invocação demorou mais que a segunda? O que acontece na fase de Init?
-   > _a responder_
+   > Na primeira chamada da nossa função acontece um "cold start": a plataforma precisa inicializar o ambiente de execução (no aws sam, subir o container no docker), carregar o codigo na memoria, iniciar o interpretador de python e rodar tudo que fica fora do handler (os `import` e o `contador = 0`). Isso é a fase de init. As invocacoes seguintes reaproveitam o mesmo ambiente e nao precisam passar de novo pelo init, só executam o handler (no `sam start api`, mesmo sem o flag). Nos meus testes a primeira chamada levou ~100 ms e as seguintes ~2 ms.
+   > fonte: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html
+
 2. O que o campo `invocacaoNesteAmbiente` mostrou com e sem `--warm-containers`?
-   > _a responder_
+   > nos dois casos o contador foi 1, 2, 3. na versao do sam que usei, o `start-api` sem flag ja cria o container quando o servidor sobe e reaproveita ele entre as chamadas; com `--warm-containers LAZY` o container so nasce na primeira chamada, mas depois tambem é reaproveitado. quando reiniciei o servidor o contador voltou pra 1, porque o container foi descartado. o caso "sem reaproveitamento" apareceu no `sam local invoke` do passo 3: cada execucao criou um container novo e o contador ficou sempre em 1.
+   > o contador sobe porque o `contador = 0` fica fora do handler e só roda no init, enquanto o `contador += 1` roda a cada chamada. ou seja, a variavel global sobrevive enquanto o ambiente estiver vivo, mas isso é sorte, nao garantia: quem decide se o ambiente é reaproveitado é a plataforma. o ambiente pode morrer (inatividade, deploy, timeout) e, com muitas requisicoes ao mesmo tempo, o lambda cria varias copias da funcao, cada uma com seu proprio contador. entao estado que importa (tipo numero de guias emitidas) tem que ficar fora da funcao, num banco ou cache. variavel global serve pra coisas caras de criar que podem ser recriadas sem problema, tipo uma conexao com o banco.
 3. O que aconteceu com `demorar = true`? Qual o tempo máximo no Lambda?
-   > _a responder_
+   > Com `demorar = true`a nossa função realiza um sleep de 5s:
+   ```python
+      if pedido.get("demorar"):
+         time.sleep(5) # passa do Timeout de 3 s do template
+   ```
+   > Que passa do timeout de 3s que configuramos em `template.yaml`:
+   ```yaml
+      Globals:
+         Function:
+            Timeout: 3
+   ```
+   > Isso faz nossa lambda parar antes de finalizar o processamento de nossa funcao handler e retornar o resposta desejada.
+Resultando num `Internal server error`.
 4. Custo de 1 milhão de execuções (128 MB, 100 ms) em us-east-1:
-   > _a responder (com a conta)_
+   > valor base: (US 0,20 por milhão de requisições e US 0,0000166667 por GB-s)
+   
+   > memoria: 128 MB = 128 / 1024 = 0,125 GB
+   > tempo: 100 ms = 0,1 s
+
+   > uma execucao: 0,125 GB × 0,1 s = 0,0125 GB-s
+   > um milhao:    0,0125 × 1.000.000 = 12.500 GB-s
+
+   > preco final = 0,20 + (0,0000166667 *12.500) = US$  = 0,20 + 0,20833375
+   > **preco final = US$ 0,40833375**
+
 5. Onde uma função assim faria sentido no Rota Vital, e onde não faria?
-   > _a responder_
+   > **faria sentido** em tarefas curtas, sem estado e disparadas por evento:
+   > - gerar a guia de transporte quando uma requisicao é atendida (exatamente o que essa funcao faz): roda uma vez, devolve o documento e acabou;
+   > - mandar notificacao pro hospital quando o status da requisicao muda (aceita, recusada, atendida);
+   > - uma verificacao agendada, tipo uma vez por dia, procurando bolsas perto do vencimento ou estoque baixo no hemocentro.
+   >
+   > nesses casos a funcao fica parada a maior parte do tempo e só roda (e só é cobrada) quando o evento acontece, o que combina com o modelo serverless.
+   >
+   > **nao faria sentido** na api principal em spring boot. ela atende o painel o tempo todo, mantem conexao com o banco e valida o jwt em toda requisicao. numa funcao serverless, o cold start de uma aplicacao java grande deixaria o usuario esperando, e com trafego constante um servidor sempre ligado sai mais barato e previsivel. tambem nao funcionariam as estruturas que guardamos em memoria no backend, como a `FilaRequisicoes` e a `ListaEstoque`: como vimos na pergunta 2, o ambiente pode morrer ou ter varias copias, entao a fila se perderia ou ficaria diferente em cada copia. esse estado teria que ir pro banco ou pra um servico de fila.
 
 ## Uso de IA
 
