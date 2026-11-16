@@ -55,10 +55,48 @@ Na primeira execução, o SAM baixou e montou a imagem `public.ecr.aws/lambda/py
 
 Evidências: `evidencias/print-timing-invocacoes.png`, `evidencias/print-primeira-invocacao-erro-base64-encoding.png`.
 
+### Passo 4: chamada por HTTP
+
+```bash
+sam local start-api                          # rodada 1
+sam local start-api --warm-containers LAZY   # rodada 2
+# em outro terminal, três vezes em cada rodada:
+curl -X POST http://127.0.0.1:3000/guias -H "Content-Type: application/json" \
+    -d '{"requisicaoId":"R-003","hospital":"H-Caruaru"}'
+```
+
+| Modo | Quando o container nasce | 1ª chamada | 2ª | 3ª | `invocacaoNesteAmbiente` |
+|---|---|---|---|---|---|
+| `sam local invoke` (Passo 3) | um novo a cada execução | ~100 ms | ~100 ms | | 1, 1 |
+| `start-api` sem flag | ao subir o servidor ("Initializing the lambda functions containers") | 112,15 ms | 2,10 ms | 2,18 ms | 1, 2, 3 |
+| `start-api --warm-containers LAZY` | na 1ª chamada (`Mounting ... SAM_CONTAINER_ID`) | 100,47 ms | 1,96 ms | 1,74 ms | 1, 2, 3 |
+
+- Nas chamadas reaproveitadas, o log mostra `Lambda function 'HelloWorldFunction' is already running`.
+- Ao reiniciar o servidor, o container é descartado e o contador volta para 1.
+
+Evidências: `evidencias/print-rodando-api-sam-start-api.png`, `evidencias/print-sem-warmup.png`.
+
+### Passo 5: limite de tempo
+
+```bash
+curl -X POST http://127.0.0.1:3000/guias -H "Content-Type: application/json" \
+    -d '{"requisicaoId":"R-003","demorar":"true","hospital":"H-Caruaru"}'
+```
+
+| Timeout no template | Resposta do curl | Log do servidor | Duration |
+|---|---|---|---|
+| 3 s | `{"message":"Internal server error"}` (HTTP 502) | `Function 'HelloWorldFunction' timed out after 3 seconds` | 3000,00 ms |
+| 10 s (após `sam build` e reiniciar o servidor) | 201, guia `G-R-003` | sem erro | 5098,22 ms |
+
+Observação: `"demorar":"true"` (string) tem o mesmo efeito de `true`, porque qualquer string não vazia é verdadeira no `if` do Python.
+
+Evidências: `evidencias/print-timeout-3s-erro.png`, `evidencias/print-timeout-sucesso-10.png`, `evidencias/prunt-curl-antes-e-depois-timeout.png`.
+
 ## Problemas encontrados
 
 1. **Docker sem permissão** (`permission denied ... docker.sock`): resolvido com `sudo usermod -aG docker $USER` e `newgrp docker`.
 2. **Body do evento em base64:** o `sam local generate-event ... --body` grava o body codificado em base64 (`isBase64Encoded: true`). O handler do enunciado faz `json.loads` direto no body, o que gerou `JSONDecodeError`. Resolvido trocando o `body` do `events/pedido.json` pelo JSON em texto.
+3. **`start-api` reaproveita o container mesmo sem flag:** o enunciado espera que, sem `--warm-containers`, cada chamada suba um container novo. Na versão do SAM usada aqui, o `start-api` cria o container ao iniciar e o reaproveita por padrão. O contraste "sem reaproveitamento" foi observado no `sam local invoke` do Passo 3, em que cada execução cria um container novo e o contador fica em 1.
 
 ## Perguntas
 
@@ -112,5 +150,5 @@ Evidências: `evidencias/print-timing-invocacoes.png`, `evidencias/print-primeir
 ## Uso de IA
 
 - **Ferramenta:** Claude (Anthropic)
-- **Finalidade:** orientação, usando pdf da atividade como contexto, na instalação do SAM CLI e do Docker no Linux Mint, e diagnóstico dos erros de permissão do Docker e do body em base64. Assim como ajuda na revisao e escrita da documentacao.
+- **Finalidade:** orientação, usando pdf da atividade como contexto, na instalação do SAM CLI e do Docker no Linux Mint, e diagnóstico dos erros de permissão do Docker e do body em base64. Assim como escrita da documentacao
 - **Validação:** Validacao manual de todos os outputs de documentacao, todos os passos de codigo, comandos de terminal, e verificoes foram feitas manualmente. 
