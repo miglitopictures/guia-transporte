@@ -60,36 +60,92 @@ aws sqs purge-queue --queue-url http://localhost:9324/000000000000/guias \
 - [x] Vídeo de até 3 min
 
 ## Registros
-### 1. Instalar as ferramentas
+
+### Passo 1: instalar as ferramentas
+
 Instalei AWS CLI v2 e a biblioteca boto3 para python (usando venv). O restante já estava instalado.
-![instalacao ok](./evidencias/print-versoes.png)
-### 2. Subir a fila
-ElasticMQ rodando no docker.
-![docker rodando imagem](./evidencias/print-elasticmq-docker-rodando.png)
-Configurando as variaveis de ambiente e criando a sqs queue com o aws cli.
-![queue criada](./evidencias/print-create-queue.png)
-![queue url rodando](./evidencias/print-queue-url.png)
-![log no elasticmq](./evidencias/print-log-create-queue.png)
-### 3-4. consumidor.py e produtor.py
-Criados e colocados na pasta src (pra ficar organizadinho).
-![scripts de teste copiados](./evidencias/print-dir-src.png)
-### 5.1 Um consumidor
-Com um consumidor todas as guias produzidas sao consumidas por ele, na ordem (R-001 a R-020). A mensagem invalida volta pra fila e o `ApproximateReceiveCount` sobe a cada tentativa (1, 2, 3, 4, 5).
-![um consumidor](./evidencias/print-consumidor-1.png)
-![o produtor envia as mensagens](./evidencias/print-produtor-1.png)
+
+| Ferramenta | Versão |
+|---|---|
+| Docker | 29.9.3 |
+| AWS CLI | 2.40.3 |
+| boto3 | 1.44.3 (ver `requirements.txt`) |
+
+**Evidência:**
+
+![versoes do docker e da aws cli](evidencias/print-versoes.png)
+
+### Passo 2: subir a fila
+
+ElasticMQ rodando no docker. Depois, configurando as variaveis de ambiente e criando a sqs queue com o aws cli.
+
+```bash
+docker run --rm -p 9324:9324 softwaremill/elasticmq-native
+
+export AWS_ACCESS_KEY_ID=x AWS_SECRET_ACCESS_KEY=x AWS_DEFAULT_REGION=us-east-1
+aws sqs create-queue --queue-name guias --attributes VisibilityTimeout=15 \
+    --endpoint-url http://localhost:9324
+```
+
+O log do ElasticMQ confirma o timeout: `MillisVisibilityTimeout(15000)`.
+
+**Evidências:**
+
+ElasticMQ no ar:
+
+![elasticmq rodando no docker](evidencias/print-elasticmq-docker-rodando.png)
+
+Comando de criação da fila e `QueueUrl` devolvida:
+
+![comando create-queue](evidencias/print-create-queue.png)
+
+![queue url](evidencias/print-queue-url.png)
+
+Log do ElasticMQ criando a fila com 15 s de visibility timeout:
+
+![log de criacao da fila](evidencias/print-log-create-queue.png)
+
+### Passos 3 e 4: consumidor e produtor
+
+Criados e colocados na pasta `src/` (pra ficar organizadinho): [`consumidor.py`](src/consumidor.py) e [`produtor.py`](src/produtor.py).
+
+**Evidência:**
+
+![pasta src](evidencias/print-dir-src.png)
+
+### Passo 5.1: um consumidor
+
+```bash
+python src/consumidor.py   # terminal 1
+python src/produtor.py     # terminal 2
+```
+
+Com um consumidor todas as guias produzidas sao consumidas por ele, na ordem (R-001 a R-020). A mensagem invalida volta pra fila e o `ApproximateReceiveCount` sobe a cada tentativa.
 
 Rodei o 5.1 de novo com hora em cada linha (`python -u src/consumidor.py | ts '%H:%M:%S' | tee evidencias/log-5-1.txt`) pra medir o visibility timeout. A invalida reaparece exatamente a cada 15 s:
 
-```
-15:09:29 falhou; volta para a fila: mensagem sem requisicaoId {'ApproximateReceiveCount': '1'}
-15:09:44 falhou; volta para a fila: mensagem sem requisicaoId {'ApproximateReceiveCount': '2'}
-15:09:59 falhou; volta para a fila: mensagem sem requisicaoId {'ApproximateReceiveCount': '3'}
-15:10:14 falhou; volta para a fila: mensagem sem requisicaoId {'ApproximateReceiveCount': '4'}
-15:10:29 falhou; volta para a fila: mensagem sem requisicaoId {'ApproximateReceiveCount': '5'}
-```
+| Hora | `ApproximateReceiveCount` | Intervalo |
+|---|---|---|
+| 15:09:29 | 1 | |
+| 15:09:44 | 2 | 15 s |
+| 15:09:59 | 3 | 15 s |
+| 15:10:14 | 4 | 15 s |
+| 15:10:29 | 5 | 15 s |
 
 Log completo: [evidencias/log-5-1.txt](evidencias/log-5-1.txt)
-### 5.2 Dois consumidores
+
+**Evidências:**
+
+Consumidor processando as 20 guias e a invalida voltando:
+
+![um consumidor](evidencias/print-consumidor-1.png)
+
+Produtor enviando as 21 mensagens:
+
+![produtor](evidencias/print-produtor-1.png)
+
+### Passo 5.2: dois consumidores
+
 Com dois consumidores, nesse teste as mensagens se dividiram uma pra cada:
 
 | PID | requisicoes processadas | total |
@@ -100,8 +156,13 @@ Com dois consumidores, nesse teste as mensagens se dividiram uma pra cada:
 Cada consumidor viu as suas em ordem, mas a ordem geral nao foi mantida (ficou intercalada entre os dois). A divisao certinha foi o que aconteceu aqui, nao uma garantia da fila.
 
 Nao limpei a fila entre o 5.1 e o 5.2, entao a invalida do 5.1 continuou rodando (contador 6 a 11, passando pelos dois consumidores) e o produtor colocou uma invalida nova (contador comecando em 1).
-![dois consumidores e um produtor](./evidencias/print-dois-consumidores-5.2.png)
-#### um experimento
+
+**Evidência:**
+
+![dois consumidores e um produtor](evidencias/print-dois-consumidores-5.2.png)
+
+### Experimento: três consumidores
+
 Com tres consumidores (os dois anteriores mais um novo), o comportamento se mantem: as mensagens se dividiram de tres em tres.
 
 | PID | requisicoes processadas | total |
@@ -111,8 +172,10 @@ Com tres consumidores (os dois anteriores mais um novo), o comportamento se mant
 | 57442 | R-003, 006, 009, 012, 015, 018 | 6 |
 
 Como rodei o produtor de novo sem limpar a fila, ja tinha mais de uma mensagem invalida girando ao mesmo tempo (por isso o mesmo terminal mostra contadores 41-44 e depois 35-38: sao mensagens diferentes). Sem DLQ, elas nunca saem da fila.
-![tres consumidores e um produtor](./evidencias/print-experimento-tres-consumidores.png)
 
+**Evidência:**
+
+![tres consumidores e um produtor](evidencias/print-experimento-tres-consumidores.png)
 
 ## Perguntas
 
@@ -122,7 +185,7 @@ Se o consumidor apagasse a mensagem logo ao receber e caisse antes de terminar (
 
 **2. Com dois consumidores, como as mensagens se dividiram? A ordem foi mantida? O que a documentação do SQS diz sobre ordem nas filas padrão?**
 
-nesse teste as mensagens se dividiram igualmente: 10 pra cada, impares num e pares no outro (ver tabela no [5.2](#52-dois-consumidores)). com tres consumidores ficou 7/7/6. a fila entregou em ordem (R-001, R-002, R-003...) e cada consumidor processou as suas em ordem, mas como eles rodam em paralelo a **ordem geral de processamento nao é garantida**, ficou intercalada.
+nesse teste as mensagens se dividiram igualmente: 10 pra cada, impares num e pares no outro (ver tabela no [passo 5.2](#passo-52-dois-consumidores)). com tres consumidores ficou 7/7/6. a fila entregou em ordem (R-001, R-002, R-003...) e cada consumidor processou as suas em ordem, mas como eles rodam em paralelo a **ordem geral de processamento nao é garantida**, ficou intercalada.
 
 na documentacao do SQS, a fila padrao tenta manter a ordem quando possivel (best-effort ordering), mas as mensagens podem chegar fora de ordem ou repetidas por causa da arquitetura altamente distribuida.
 
