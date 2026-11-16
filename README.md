@@ -153,6 +153,7 @@ Observação: `"demorar":"true"` (string) tem o mesmo efeito de `true`, porque q
    > um milhao:    0,0125 × 1.000.000 = 12.500 GB-s
 
    > preco final = 0,20 + (0,0000166667 *12.500) = US$  = 0,20 + 0,20833375
+
    > **preco final = US$ 0,40833375**
 
 5. Onde uma função assim faria sentido no Rota Vital, e onde não faria?
