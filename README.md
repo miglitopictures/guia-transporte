@@ -1,6 +1,9 @@
 # Guia de Transporte Severless
 Atividade individual 1 | Infraestrutura de Software | ADS - CESAR School - 2026.2
-Miguel Duarte de Barros (mdb@cesar.school)
+
+**Miguel Duarte de Barros | mdb@cesar.school**
+
+---
 
 Função serverless que gera a **guia de transporte** de uma requisição do Rota Vital, rodando localmente com o AWS SAM CLI.
 
