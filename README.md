@@ -7,6 +7,8 @@ Função serverless que gera a **guia de transporte** de uma requisição do Rot
 
 **Caminho escolhido:** A (AWS SAM CLI local, sem conta AWS).
 
+**Vídeo:** https://youtu.be/6_lkfpqW0Ps
+
 ## Pré-requisitos
 
 - Linux Mint (ThinkPad T14 Gen 2, x86_64)
@@ -39,7 +41,7 @@ sam local invoke -e events/pedido.json
 - [x] Passo 4: chamada por HTTP (`sam local start-api` + `curl`), com e sem `--warm-containers LAZY`
 - [x] Passo 5: estouro do timeout (`demorar: true`) e ajuste para 10 s
 - [x] Respostas às 5 perguntas
-- [ ] Vídeo de até 3 min
+- [x] Vídeo de até 3 min
 
 ## Registros
 
