@@ -1,21 +1,22 @@
 # Mensageria
 Atividade individual 2 | Infraestrutura de Software | ADS - CESAR School - 2026.2
 
-Perguntas
+## Perguntas
 
 **Por que o consumidor só apaga a mensagem depois de processar? O que  aconteceria se apagasse antes?**
+Se o consumidor apagasse a pensagem (tirasse da fila) logo ao iniciar o processamento dela, teriamos o risco do consumidor cair e a **mensagem se perder silenciosamente**. Por isso o mecanismo do Visibility Timeout "esconde" a mensagem por um tempo estabelecido esperando a confirmação do consumidor de que a mensagem foi processada e pode ser deletada da fila (sqs.delete_message() no nosso caso).
 
 **Com dois consumidores, como as mensagens se dividiram? A ordem foi mantida? O que a documentação do SQS diz sobre ordem nas filas padrão?**
-nesse teste as mensagens se dividiram uma pra cada:
+nesse teste as mensagens se dividiram igualmente pra cada consumidor:
 
 | PID | requisicoes processadas | total |
 |---|---|---|
 | 55833 | R-001, 003, 005, 007, 009, 011, 013, 015, 017, 019 | 10 |
 | 56283 | R-002, 004, 006, 008, 010, 012, 014, 016, 018, 020 | 10 |
 
->Cada consumidor viu as suas em ordem, mas a ordem geral nao foi mantida (ficou intercalada entre os dois). A divisao certinha foi o que aconteceu aqui, nao uma garantia da fila.
+> Cada consumidor viu as suas em ordem, mas a ordem geral nao foi mantida (ficou intercalada entre os dois). A divisao certinha foi o que aconteceu aqui, nao uma garantia da fila.
 
-> Na documentacao da SQS, é especificado que as mensagens podem chegar repetidas ou fora de ordem devido a arquitetura altamente distuibuida. Mas tambem especificam que a fila padrao tenta o sempre manter a ordem quando possivel. (talvez por isso nos meus runs, sairam certinhas)
+> Na documentacao da SQS, é especificado que as mensagens podem chegar repetidas ou fora de ordem devido a arquitetura altamente distuibuida. Mas tambem especificam que a fila padrao tenta o sempre manter a ordem quando possivel.
 
 https://docs.aws.amazon.com/pt_br/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html
 
